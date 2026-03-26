@@ -3,7 +3,7 @@ layout: default
 title: Home
 ---
 
-<p style="white-space: nowrap;">Recent engineering graduate specializing in game development with Unity and C#.</p>
+Recent engineering graduate specializing in game development with Unity and C#.
 
 ## Projects
 - Project 1
