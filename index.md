@@ -1,7 +1,3 @@
-# Daniel Heugenhauser
-
-Unity Developer | Gameplay Programmer
-
 Recent engineering graduate specializing in game development with Unity and C#.
 
 ## Projects
