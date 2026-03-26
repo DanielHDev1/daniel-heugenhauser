@@ -1,3 +1,8 @@
+---
+layout: default
+title: Home
+---
+
 Recent engineering graduate specializing in game development with Unity and C#.
 
 ## Projects
@@ -5,10 +10,10 @@ Recent engineering graduate specializing in game development with Unity and C#.
 - Project 2
 - Project 3
 
-## Resume
-[Download CV](./assets/resume/Daniel_Heugenhauser_Resume.pdf)
+## CV
+[Download CV](./assets/resume/Daniel_Heugenhauser_CV.pdf)
 
 ## Contact
-- LinkedIn
-- GitHub
-- Email
+- [GitHub](https://github.com/yourusername)
+- [LinkedIn](https://linkedin.com/in/yourname)
+- [Email](mailto:you@example.com)
