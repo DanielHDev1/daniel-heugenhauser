@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Crops and Corpses placeholder</title>
+  <desc id="desc">Placeholder project image for Crops and Corpses.</desc>
+  <rect width="1200" height="675" fill="#eef3e4"/>
+  <rect x="36" y="36" width="1128" height="603" rx="24" fill="#9bb46f"/>
+  <rect x="72" y="72" width="1056" height="531" rx="18" fill="#f8fbf2"/>
+  <text x="96" y="190" fill="#4b6030" font-family="Segoe UI, Arial, sans-serif" font-size="38">Project Image Placeholder</text>
+  <text x="96" y="320" fill="#1f1f1f" font-family="Georgia, Times New Roman, serif" font-size="84">Crops &amp; Corpses</text>
+  <text x="96" y="410" fill="#5b5b5b" font-family="Segoe UI, Arial, sans-serif" font-size="34">Replace this file with your cover art or screenshot.</text>
+  <text x="96" y="510" fill="#4b6030" font-family="Consolas, monospace" font-size="28">assets/images/projects/crops-and-corpses.svg</text>
+</svg>

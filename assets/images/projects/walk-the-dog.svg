@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Walk the Dog on paper placeholder</title>
+  <desc id="desc">Placeholder project image for Walk the Dog on paper.</desc>
+  <rect width="1200" height="675" fill="#f3efe6"/>
+  <rect x="36" y="36" width="1128" height="603" rx="24" fill="#d7c4a3"/>
+  <rect x="72" y="72" width="1056" height="531" rx="18" fill="#fffdf8"/>
+  <text x="96" y="190" fill="#6c5434" font-family="Segoe UI, Arial, sans-serif" font-size="38">Project Image Placeholder</text>
+  <text x="96" y="320" fill="#1f1f1f" font-family="Georgia, Times New Roman, serif" font-size="84">Walk the Dog on paper</text>
+  <text x="96" y="410" fill="#5b5b5b" font-family="Segoe UI, Arial, sans-serif" font-size="34">Replace this file with your cover art or screenshot.</text>
+  <text x="96" y="510" fill="#6c5434" font-family="Consolas, monospace" font-size="28">assets/images/projects/walk-the-dog.svg</text>
+</svg>
