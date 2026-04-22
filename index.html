@@ -4,10 +4,37 @@ title: Home
 ---
 
 <style>
+  .project {
+    margin: 0 0 40px;
+    padding: 0 0 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .project:last-of-type {
+    border-bottom: 0;
+  }
+
+  .project-summary {
+    margin-bottom: 12px;
+  }
+
+  .project-meta {
+    margin: 0 0 16px 18px;
+  }
+
+  .project-links {
+    margin-top: 12px;
+  }
+
+  .project-links a {
+    margin-right: 14px;
+  }
+
   .project-thumb {
     display: block;
     max-width: 420px;
     width: 100%;
+    margin: 12px 0 16px;
     border-radius: 10px;
     cursor: zoom-in;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
@@ -50,32 +77,74 @@ title: Home
 
 <h2>Projects</h2>
 
-<h3>Walk the Dog on paper</h3>
-<img
-  src="./assets/images/projects/walk-the-dog.svg"
-  alt="Walk the Dog on paper"
-  class="project-thumb"
-  onclick="openLightbox(this.src, this.alt)"
->
-<p>Paper prototype project. Replace this placeholder with a cover image or screenshot at <code>assets/images/projects/walk-the-dog.svg</code>.</p>
+<section class="project">
+  <h3>Walk the Dog on paper</h3>
+  <img
+    src="./assets/images/projects/walk-the-dog.svg"
+    alt="Walk the Dog on paper"
+    class="project-thumb"
+    onclick="openLightbox(this.src, this.alt)"
+  >
+  <p class="project-summary">
+    Paper prototype project focused on communicating a clear game loop and player interactions.
+    Replace this summary with what the project does and what you contributed.
+  </p>
+  <ul class="project-meta">
+    <li><strong>Role:</strong> Add your role here</li>
+    <li><strong>Tools:</strong> Add the tools or engine here</li>
+    <li><strong>Focus:</strong> Add the main systems or goals here</li>
+    <li><strong>Status:</strong> Add course, team, or timeframe here</li>
+  </ul>
+  <p class="project-links">
+    <a href="./assets/images/projects/walk-the-dog.svg">Image</a>
+  </p>
+</section>
 
-<h3>Crops &amp; Corpses</h3>
-<img
-  src="./assets/images/projects/crops-and-corpses.svg"
-  alt="Crops & Corpses"
-  class="project-thumb"
-  onclick="openLightbox(this.src, this.alt)"
->
-<p>Game project. Replace this placeholder with a cover image or screenshot at <code>assets/images/projects/crops-and-corpses.svg</code>.</p>
+<section class="project">
+  <h3>Crops &amp; Corpses</h3>
+  <img
+    src="./assets/images/projects/crops-and-corpses.svg"
+    alt="Crops & Corpses"
+    class="project-thumb"
+    onclick="openLightbox(this.src, this.alt)"
+  >
+  <p class="project-summary">
+    Game project section with room for a short portfolio summary.
+    Replace this with a concise description of the game and your technical work.
+  </p>
+  <ul class="project-meta">
+    <li><strong>Role:</strong> Add your role here</li>
+    <li><strong>Tools:</strong> Add the tools or engine here</li>
+    <li><strong>Focus:</strong> Add the main systems or goals here</li>
+    <li><strong>Status:</strong> Add course, team, or timeframe here</li>
+  </ul>
+  <p class="project-links">
+    <a href="./assets/images/projects/crops-and-corpses.svg">Image</a>
+  </p>
+</section>
 
-<h3>HymyApp</h3>
-<img
-  src="./assets/images/projects/hymyapp.svg"
-  alt="HymyApp"
-  class="project-thumb"
-  onclick="openLightbox(this.src, this.alt)"
->
-<p>Application project. Replace this placeholder with a cover image or screenshot at <code>assets/images/projects/hymyapp.svg</code>.</p>
+<section class="project">
+  <h3>HymyApp</h3>
+  <img
+    src="./assets/images/projects/hymyapp.svg"
+    alt="HymyApp"
+    class="project-thumb"
+    onclick="openLightbox(this.src, this.alt)"
+  >
+  <p class="project-summary">
+    Application project section with space for a short description and your main contribution.
+    Replace this text with the problem the app solves and what you built.
+  </p>
+  <ul class="project-meta">
+    <li><strong>Role:</strong> Add your role here</li>
+    <li><strong>Tools:</strong> Add the tools or framework here</li>
+    <li><strong>Focus:</strong> Add the main features or responsibilities here</li>
+    <li><strong>Status:</strong> Add course, team, or timeframe here</li>
+  </ul>
+  <p class="project-links">
+    <a href="./assets/images/projects/hymyapp.svg">Image</a>
+  </p>
+</section>
 
 <h2>CV</h2>
 <p><a href="./assets/resume/Daniel_Heugenhauser_CV.pdf">Download CV</a></p>
