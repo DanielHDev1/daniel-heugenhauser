@@ -6,9 +6,9 @@ title: Home
 Recent engineering graduate specializing in game development with Unity and C#.
 
 ## Projects
-- Project 1
-- Project 2
-- Project 3
+- Walk the Dog on paper
+- Crops & Corpses
+- HymyApp
 
 ## CV
 [Download CV](./assets/resume/Daniel_Heugenhauser_CV.pdf)
