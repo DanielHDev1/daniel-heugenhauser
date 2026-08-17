@@ -1,0 +1,140 @@
+# Add another named entry here, then render it on a page with:
+# {% include code-sample.html sample=site.data.code_samples.entry_name %}
+
+walk_the_dog_quest_progression:
+  title: "Code example: quest progression and persistence"
+  description: "This method validates level completion, advances the quest when all of its levels are finished, and persists the updated state."
+  language: csharp
+  code: |-
+    public void CompleteLevel(int questID, int levelIndex)
+    {
+        var quest = FindQuestByID(questID);
+        if (quest != null)
+        {
+            var level = quest.GetLevel(levelIndex);
+            if (level != null && !level.isLevelCompleted && level.bonesCount > 0)
+            {
+                level.CompleteLevel();
+
+                if (quest.IsQuestFullyCompleted())
+                {
+                    CompleteQuest();
+                }
+
+                SaveManager.SaveQuestData(questList);
+            }
+            else
+            {
+                Debug.LogWarning($"Level {levelIndex} was already completed " +
+                                 $"or not found in quest {questID}.");
+            }
+        }
+        else
+        {
+            Debug.LogError($"Quest with ID {questID} not found.");
+        }
+    }
+
+walk_the_dog_quest_save_serialization:
+  title: "Code example: quest save serialization"
+  description: "This method converts nested quest and level state into serializable data before saving it as JSON in Unity's persistent data directory."
+  language: csharp
+  code: |-
+    public static void SaveQuestData(QuestScriptableObject[] questList)
+    {
+        List<QuestData> questDataList = questList.Select(quest => new QuestData
+        {
+            questID = quest.questID,
+            questState = quest.questState,
+            totalExp = quest.totalEXP,
+            newMessageIndicator = quest.newMessageIndicator,
+            levels = quest.questLevels.Select(level => new QuestData.LevelData
+            {
+                levelIndex = level.levelIndex,
+                levelNumber = level.levelNumber,
+                isLevelCompleted = level.isLevelCompleted,
+                isLevelActive = level.isLevelActive,
+                bonesCount = level.bonesCount,
+                levelHeat = level.levelHeat,
+                levelExp = level.levelEXP
+            }).ToList()
+        }).ToList();
+
+        string jsonData = JsonUtility.ToJson(
+            new QuestDataList { quests = questDataList }, true);
+        File.WriteAllText(
+            Application.persistentDataPath + "/" + QUEST_SAVE_FILE_PATH,
+            jsonData);
+
+        Debug.Log("Quest data saved successfully.");
+    }
+
+crops_and_corpses_zombie_navigation:
+  title: "Code example: zombie navigation state"
+  description: "The chase state follows the navigation path toward the player and returns the zombie to its idle state when the target is too far away or unavailable."
+  language: csharp
+  code: |-
+    public override void Physics_Update(double delta)
+    {
+        if (_player != null)
+        {
+            _moveSpeed = ZombieManager.chaseSpeed;
+            Vector2 playerDirection =
+                _player.GlobalPosition - _zombie.GlobalPosition;
+
+            if (playerDirection.Length() > 80)
+            {
+                ChasePlayer();
+            }
+            else
+            {
+                _zombie.Velocity = Vector2.Zero;
+            }
+
+            if (playerDirection.Length() > 600)
+            {
+                _timer.Stop();
+                EmitSignal("Transitioned", "idle");
+            }
+        }
+        else
+        {
+            _timer.Stop();
+            EmitSignal("Transitioned", "idle");
+        }
+    }
+
+    private void ChasePlayer()
+    {
+        Vector2 nextPathPosition = _navAgent.GetNextPathPosition();
+        Vector2 newVelocity =
+            (nextPathPosition - _zombie.GlobalPosition).Normalized();
+
+        _zombie.Velocity = newVelocity * _moveSpeed;
+    }
+
+yeti_farm_adaptive_difficulty:
+  title: "Code example: adaptive minigame difficulty"
+  description: "Difficulty changes the probability of special mole types and shortens how long each mole remains visible."
+  language: csharp
+  code: |-
+    private void SetLevel(int level)
+    {
+        bombRate = Mathf.Min(level * 0.025f, 0.25f);
+        hardRate = Mathf.Min(level * 0.025f, 1f);
+
+        float durationMin =
+            Mathf.Clamp(1 - level * 0.1f, 0.01f, 1f);
+        float durationMax =
+            Mathf.Clamp(2 - level * 0.1f, 0.01f, 2f);
+
+        duration = Random.Range(durationMin, durationMax);
+    }
+
+    public void Activate(int level)
+    {
+        grabAnimationDuration = gameManager.grabTimer;
+        SetLevel(level);
+        CreateNext();
+        StartCoroutine(ShowHide(startPosition, endPosition));
+    }

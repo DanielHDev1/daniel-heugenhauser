@@ -1,0 +1,6 @@
+{% assign sample = include.sample %}
+<details class="code-sample">
+  <summary>{{ sample.title }}</summary>
+  <p>{{ sample.description }}</p>
+  <pre><code class="language-{{ sample.language | default: 'text' }}">{{ sample.code | escape }}</code></pre>
+</details>

@@ -33,40 +33,8 @@ title: Home
     <a href="https://yourname.itch.io/walk-the-dog" target="_blank" rel="noopener noreferrer">itch.io</a>
     <a href="https://www.youtube.com/watch?v=your-video-id" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
-  <details class="code-sample">
-    <summary>Code example: quest progression and persistence</summary>
-    <p>
-      This method validates level completion, advances the quest when all of its levels are finished, and persists the updated state.
-    </p>
-    <pre><code class="language-csharp">public void CompleteLevel(int questID, int levelIndex)
-{
-    var quest = FindQuestByID(questID);
-    if (quest != null)
-    {
-        var level = quest.GetLevel(levelIndex);
-        if (level != null &amp;&amp; !level.isLevelCompleted &amp;&amp; level.bonesCount &gt; 0)
-        {
-            level.CompleteLevel();
-
-            if (quest.IsQuestFullyCompleted())
-            {
-                CompleteQuest();
-            }
-
-            SaveManager.SaveQuestData(questList);
-        }
-        else
-        {
-            Debug.LogWarning($"Level {levelIndex} was already completed " +
-                             $"or not found in quest {questID}.");
-        }
-    }
-    else
-    {
-        Debug.LogError($"Quest with ID {questID} not found.");
-    }
-}</code></pre>
-  </details>
+  {% include code-sample.html sample=site.data.code_samples.walk_the_dog_quest_progression %}
+  {% include code-sample.html sample=site.data.code_samples.walk_the_dog_quest_save_serialization %}
 </section>
 
 <section class="project">
@@ -92,50 +60,7 @@ title: Home
     <a href="https://tossu.itch.io/crops-and-corpses" target="_blank" rel="noopener noreferrer">itch.io</a>
     <a href="https://youtu.be/FpkO_SzyKTk?si=cOIGiRp3-5IKX4go" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
-  <details class="code-sample">
-    <summary>Code example: zombie navigation state</summary>
-    <p>
-      The chase state follows the navigation path toward the player and returns the zombie to its idle state when the target is too far away or unavailable.
-    </p>
-    <pre><code class="language-csharp">public override void Physics_Update(double delta)
-{
-    if (_player != null)
-    {
-        _moveSpeed = ZombieManager.chaseSpeed;
-        Vector2 playerDirection =
-            _player.GlobalPosition - _zombie.GlobalPosition;
-
-        if (playerDirection.Length() &gt; 80)
-        {
-            ChasePlayer();
-        }
-        else
-        {
-            _zombie.Velocity = Vector2.Zero;
-        }
-
-        if (playerDirection.Length() &gt; 600)
-        {
-            _timer.Stop();
-            EmitSignal("Transitioned", "idle");
-        }
-    }
-    else
-    {
-        _timer.Stop();
-        EmitSignal("Transitioned", "idle");
-    }
-}
-
-private void ChasePlayer()
-{
-    Vector2 nextPathPosition = _navAgent.GetNextPathPosition();
-    Vector2 newVelocity =
-        (nextPathPosition - _zombie.GlobalPosition).Normalized();
-
-    _zombie.Velocity = newVelocity * _moveSpeed;
-}</code></pre>
-  </details>
+  {% include code-sample.html sample=site.data.code_samples.crops_and_corpses_zombie_navigation %}
 </section>
 
 <section class="project">
@@ -162,32 +87,7 @@ private void ChasePlayer()
     <a href="https://github.com/taruvikstr/YetiCareProject" target="_blank" rel="noopener noreferrer">GitHub</a>
     <a href="https://youtu.be/0ydjKjFcQnE?si=rkUCv9Nn_ByF-68x" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
-  <details class="code-sample">
-    <summary>Code example: adaptive minigame difficulty</summary>
-    <p>
-      Difficulty changes the probability of special mole types and shortens how long each mole remains visible.
-    </p>
-    <pre><code class="language-csharp">private void SetLevel(int level)
-{
-    bombRate = Mathf.Min(level * 0.025f, 0.25f);
-    hardRate = Mathf.Min(level * 0.025f, 1f);
-
-    float durationMin =
-        Mathf.Clamp(1 - level * 0.1f, 0.01f, 1f);
-    float durationMax =
-        Mathf.Clamp(2 - level * 0.1f, 0.01f, 2f);
-
-    duration = Random.Range(durationMin, durationMax);
-}
-
-public void Activate(int level)
-{
-    grabAnimationDuration = gameManager.grabTimer;
-    SetLevel(level);
-    CreateNext();
-    StartCoroutine(ShowHide(startPosition, endPosition));
-}</code></pre>
-  </details>
+  {% include code-sample.html sample=site.data.code_samples.yeti_farm_adaptive_difficulty %}
 </section>
 
 <h2>CV</h2>
