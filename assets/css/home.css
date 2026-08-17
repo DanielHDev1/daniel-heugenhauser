@@ -24,6 +24,44 @@
   margin-right: 14px;
 }
 
+.code-sample {
+  margin-top: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #f8f9fa;
+  overflow: hidden;
+}
+
+.code-sample summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.code-sample[open] summary {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.code-sample p {
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.code-sample pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  border-radius: 0;
+  background: #20252c;
+  color: #f4f7fa;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.code-sample code {
+  font-family: Consolas, "Liberation Mono", monospace;
+}
+
 .project-thumb {
   display: block;
   max-width: 420px;

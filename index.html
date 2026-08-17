@@ -33,6 +33,40 @@ title: Home
     <a href="https://yourname.itch.io/walk-the-dog" target="_blank" rel="noopener noreferrer">itch.io</a>
     <a href="https://www.youtube.com/watch?v=your-video-id" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
+  <details class="code-sample">
+    <summary>Code example: quest progression and persistence</summary>
+    <p>
+      This method validates level completion, advances the quest when all of its levels are finished, and persists the updated state.
+    </p>
+    <pre><code class="language-csharp">public void CompleteLevel(int questID, int levelIndex)
+{
+    var quest = FindQuestByID(questID);
+    if (quest != null)
+    {
+        var level = quest.GetLevel(levelIndex);
+        if (level != null &amp;&amp; !level.isLevelCompleted &amp;&amp; level.bonesCount &gt; 0)
+        {
+            level.CompleteLevel();
+
+            if (quest.IsQuestFullyCompleted())
+            {
+                CompleteQuest();
+            }
+
+            SaveManager.SaveQuestData(questList);
+        }
+        else
+        {
+            Debug.LogWarning($"Level {levelIndex} was already completed " +
+                             $"or not found in quest {questID}.");
+        }
+    }
+    else
+    {
+        Debug.LogError($"Quest with ID {questID} not found.");
+    }
+}</code></pre>
+  </details>
 </section>
 
 <section class="project">
@@ -58,6 +92,50 @@ title: Home
     <a href="https://tossu.itch.io/crops-and-corpses" target="_blank" rel="noopener noreferrer">itch.io</a>
     <a href="https://youtu.be/FpkO_SzyKTk?si=cOIGiRp3-5IKX4go" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
+  <details class="code-sample">
+    <summary>Code example: zombie navigation state</summary>
+    <p>
+      The chase state follows the navigation path toward the player and returns the zombie to its idle state when the target is too far away or unavailable.
+    </p>
+    <pre><code class="language-csharp">public override void Physics_Update(double delta)
+{
+    if (_player != null)
+    {
+        _moveSpeed = ZombieManager.chaseSpeed;
+        Vector2 playerDirection =
+            _player.GlobalPosition - _zombie.GlobalPosition;
+
+        if (playerDirection.Length() &gt; 80)
+        {
+            ChasePlayer();
+        }
+        else
+        {
+            _zombie.Velocity = Vector2.Zero;
+        }
+
+        if (playerDirection.Length() &gt; 600)
+        {
+            _timer.Stop();
+            EmitSignal("Transitioned", "idle");
+        }
+    }
+    else
+    {
+        _timer.Stop();
+        EmitSignal("Transitioned", "idle");
+    }
+}
+
+private void ChasePlayer()
+{
+    Vector2 nextPathPosition = _navAgent.GetNextPathPosition();
+    Vector2 newVelocity =
+        (nextPathPosition - _zombie.GlobalPosition).Normalized();
+
+    _zombie.Velocity = newVelocity * _moveSpeed;
+}</code></pre>
+  </details>
 </section>
 
 <section class="project">
@@ -81,9 +159,35 @@ title: Home
   </ul>
   <p class="project-links">
     <a href="./assets/images/projects/YetiFarm_CV_image.png" target="_blank" rel="noopener noreferrer">Image</a>
-    <!-- <a href="https://your-project-page.example.com">Project Page</a> -->
+    <a href="https://github.com/taruvikstr/YetiCareProject" target="_blank" rel="noopener noreferrer">GitHub</a>
     <a href="https://youtu.be/0ydjKjFcQnE?si=rkUCv9Nn_ByF-68x" target="_blank" rel="noopener noreferrer">Trailer</a>
   </p>
+  <details class="code-sample">
+    <summary>Code example: adaptive minigame difficulty</summary>
+    <p>
+      Difficulty changes the probability of special mole types and shortens how long each mole remains visible.
+    </p>
+    <pre><code class="language-csharp">private void SetLevel(int level)
+{
+    bombRate = Mathf.Min(level * 0.025f, 0.25f);
+    hardRate = Mathf.Min(level * 0.025f, 1f);
+
+    float durationMin =
+        Mathf.Clamp(1 - level * 0.1f, 0.01f, 1f);
+    float durationMax =
+        Mathf.Clamp(2 - level * 0.1f, 0.01f, 2f);
+
+    duration = Random.Range(durationMin, durationMax);
+}
+
+public void Activate(int level)
+{
+    grabAnimationDuration = gameManager.grabTimer;
+    SetLevel(level);
+    CreateNext();
+    StartCoroutine(ShowHide(startPosition, endPosition));
+}</code></pre>
+  </details>
 </section>
 
 <h2>CV</h2>
@@ -91,7 +195,7 @@ title: Home
 
 <h2>Contact</h2>
 <ul>
-  <li><a href="https://github.com/yourusername" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+  <li><a href="https://github.com/DanielHDev1" target="_blank" rel="noopener noreferrer">GitHub</a></li>
   <li><a href="https://linkedin.com/in/yourname" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
   <li><a href="mailto:you@example.com">Email</a></li>
 </ul>
