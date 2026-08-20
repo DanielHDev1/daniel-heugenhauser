@@ -514,6 +514,279 @@ crops_and_corpses_zombie_manager:
         }
     }
 
+yeti_farm_mole_game_manager:
+  title: "Code example: Whack-a-Mole game loop"
+  description: "A condensed version of the production MoleGameManager, edited for readability. It configures the active board, runs timed and survival modes, scales concurrent moles with difficulty, and reports results without coupling the game loop to a specific menu."
+  language: csharp
+  code: |-
+    using System;
+    using System.Collections.Generic;
+    using TMPro;
+    using UnityEngine;
+    using Random = UnityEngine.Random;
+
+    public sealed class MoleGameManager : MonoBehaviour
+    {
+        public enum GameMode
+        {
+            Timed,
+            Survival
+        }
+
+        [Header("Board")]
+        [SerializeField] private List<Mole> moles;
+        [SerializeField] private int[] difficultyPresets = { 9, 10, 20 };
+        [SerializeField, Min(1)] private int difficultyPerExtraMole = 10;
+
+        [Header("Round rules")]
+        [SerializeField, Min(1f)] private float roundDurationSeconds = 60f;
+
+        [Header("UI")]
+        [SerializeField] private GameObject gameUI;
+        [SerializeField] private TMP_Text timeText;
+        [SerializeField] private TMP_Text scoreText;
+        [SerializeField] private TMP_Text vegetableCountText;
+
+        private readonly List<Mole> playableMoles = new();
+        private readonly HashSet<Mole> activeMoles = new();
+
+        private GameMode gameMode;
+        private float timeRemaining;
+        private int startingVegetables;
+        private bool isPlaying;
+
+        public int Score { get; private set; }
+        public int CurrentDifficulty { get; private set; }
+        public int VegetablesRemaining { get; private set; }
+
+        public event Action<int, int, GameMode> GameFinished;
+
+        private void Start()
+        {
+            gameUI.SetActive(false);
+
+            foreach (Mole mole in moles)
+            {
+                mole.Hide();
+                mole.enabled = false;
+            }
+        }
+
+        public void StartGame(
+            GameMode mode,
+            int difficultyPresetIndex,
+            int activeMoleCount)
+        {
+            if (moles.Count == 0)
+            {
+                Debug.LogError("The mole board has no configured moles.");
+                return;
+            }
+
+            gameMode = mode;
+            CurrentDifficulty = mode == GameMode.Survival
+                ? 0
+                : GetDifficulty(difficultyPresetIndex);
+
+            ConfigureBoard(activeMoleCount);
+
+            Score = 0;
+            timeRemaining = roundDurationSeconds;
+            startingVegetables = playableMoles.Count;
+            VegetablesRemaining = startingVegetables;
+            activeMoles.Clear();
+            isPlaying = true;
+
+            gameUI.SetActive(true);
+            timeText.gameObject.SetActive(mode == GameMode.Timed);
+            UpdateHud();
+        }
+
+        private void Update()
+        {
+            if (!isPlaying)
+            {
+                return;
+            }
+
+            if (gameMode == GameMode.Survival)
+            {
+                CurrentDifficulty = Score;
+
+                if (VegetablesRemaining < startingVegetables)
+                {
+                    FinishGame();
+                    return;
+                }
+            }
+            else
+            {
+                timeRemaining = Mathf.Max(
+                    0f,
+                    timeRemaining - Time.deltaTime);
+
+                if (timeRemaining <= 0f)
+                {
+                    FinishGame();
+                    return;
+                }
+            }
+
+            TryActivateMole();
+            UpdateHud();
+        }
+
+        public void ResolveMole(int moleIndex, bool scored)
+        {
+            if (!TryGetMole(moleIndex, out Mole mole))
+            {
+                return;
+            }
+
+            activeMoles.Remove(mole);
+
+            if (scored)
+            {
+                Score++;
+            }
+
+            UpdateHud();
+        }
+
+        public void RemoveVegetable()
+        {
+            VegetablesRemaining = Mathf.Max(
+                0,
+                VegetablesRemaining - 1);
+            UpdateHud();
+        }
+
+        private void TryActivateMole()
+        {
+            if (playableMoles.Count == 0)
+            {
+                return;
+            }
+
+            int difficultyStep = Mathf.Max(1, difficultyPerExtraMole);
+            int concurrentMoles = Mathf.Clamp(
+                1 + CurrentDifficulty / difficultyStep,
+                1,
+                playableMoles.Count);
+
+            if (activeMoles.Count >= concurrentMoles)
+            {
+                return;
+            }
+
+            int startIndex = Random.Range(0, playableMoles.Count);
+
+            for (int offset = 0; offset < playableMoles.Count; offset++)
+            {
+                int index = (startIndex + offset) % playableMoles.Count;
+                Mole mole = playableMoles[index];
+
+                if (!activeMoles.Add(mole))
+                {
+                    continue;
+                }
+
+                int moleLevel = Mathf.Max(
+                    1,
+                    CurrentDifficulty / difficultyStep);
+                mole.Activate(moleLevel);
+                return;
+            }
+        }
+
+        private void ConfigureBoard(int requestedMoleCount)
+        {
+            playableMoles.Clear();
+
+            List<int> shuffledIndices = new(moles.Count);
+            for (int i = 0; i < moles.Count; i++)
+            {
+                shuffledIndices.Add(i);
+                moles[i].gameObject.SetActive(false);
+            }
+
+            for (int i = shuffledIndices.Count - 1; i > 0; i--)
+            {
+                int swapIndex = Random.Range(0, i + 1);
+                (shuffledIndices[i], shuffledIndices[swapIndex]) =
+                    (shuffledIndices[swapIndex], shuffledIndices[i]);
+            }
+
+            int moleCount = Mathf.Clamp(
+                requestedMoleCount,
+                1,
+                moles.Count);
+
+            for (int i = 0; i < moleCount; i++)
+            {
+                int moleIndex = shuffledIndices[i];
+                Mole mole = moles[moleIndex];
+
+                mole.gameObject.SetActive(true);
+                mole.SetIndex(moleIndex);
+                mole.Hide();
+                mole.enabled = true;
+                playableMoles.Add(mole);
+            }
+        }
+
+        private int GetDifficulty(int presetIndex)
+        {
+            if (difficultyPresets.Length == 0)
+            {
+                return 1;
+            }
+
+            int index = Mathf.Clamp(
+                presetIndex,
+                0,
+                difficultyPresets.Length - 1);
+            return Mathf.Max(1, difficultyPresets[index]);
+        }
+
+        private bool TryGetMole(int index, out Mole mole)
+        {
+            bool isValid = index >= 0 &&
+                index < moles.Count &&
+                moles[index] != null;
+            mole = isValid ? moles[index] : null;
+            return isValid;
+        }
+
+        private void UpdateHud()
+        {
+            int displayedTime = Mathf.CeilToInt(timeRemaining);
+            timeText.SetText(
+                "{0:00}:{1:00}",
+                displayedTime / 60,
+                displayedTime % 60);
+            scoreText.SetText("{0}", Score);
+            vegetableCountText.SetText("{0}", VegetablesRemaining);
+        }
+
+        private void FinishGame()
+        {
+            isPlaying = false;
+
+            foreach (Mole mole in playableMoles)
+            {
+                mole.StopGame();
+            }
+
+            activeMoles.Clear();
+            gameUI.SetActive(false);
+
+            int vegetablesLost =
+                startingVegetables - VegetablesRemaining;
+            GameFinished?.Invoke(Score, vegetablesLost, gameMode);
+        }
+    }
+
 yeti_farm_adaptive_difficulty:
   title: "Code example: adaptive minigame difficulty"
   description: "Difficulty changes the probability of special mole types and shortens how long each mole remains visible."
