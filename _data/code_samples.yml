@@ -240,116 +240,277 @@ crops_and_corpses_zombie_navigation:
 
 crops_and_corpses_time_manager:
   title: "Code example: day and night cycle"
-  description: "This Godot manager restores the current world time, transitions the scene lighting between day and night, advances the day counter, and delays zombie waves until night has begun."
+  description: "This cleaned-up Godot manager uses configurable cycle timings, restores persisted lighting, advances the day counter, and keeps the delayed zombie-wave state separate from the visual day/night transition."
   language: csharp
   code: |-
     using Godot;
 
     public partial class TimeManager : Node
     {
-        private int dayCounter;
-        private float currentTime;
-        private float timeSpeed = 1;
+        private const string GlobalTimePath = "/root/GlobalTime";
+        private const string SunlightPath = "Sunlight";
 
-        [Export] private Color nightTimeColor =
-            new Color(0.5f, 0.5f, 0.5f);
-        [Export] private Color dayTimeColor = new Color(1, 1, 1);
-        [Export] private float transitionDuration = 3f;
+        [ExportGroup("Cycle timings")]
+        [Export] private float dayDurationSeconds = 300f;
+        [Export] private float nightDurationSeconds = 150f;
+        [Export] private float zombieDelaySeconds = 60f;
 
-        private float dayTimeLength = 300f;
-        private float nightTimeLength = 150f;
+        [ExportGroup("Lighting")]
+        [Export] private Color dayColor = Colors.White;
+        [Export] private Color nightColor = new(0.5f, 0.5f, 0.5f);
+        [Export] private float transitionDurationSeconds = 3f;
+
+        public static bool IsDaytime { get; private set; } = true;
+
         private GlobalTime globalTime;
-
-        [Export] private float zombieDelay = 60f;
-
-        private static bool isDayTime = true;
-        public static bool dayTime
-        {
-            get { return isDayTime; }
-            set { isDayTime = value; }
-        }
-
         private CanvasModulate sunlight;
+        private int dayCounter;
+        private bool wasDaylight;
+        private bool usesOutdoorLighting;
 
         public override void _Ready()
         {
-            globalTime = GetNode<GlobalTime>("/root/GlobalTime");
-            sunlight = GetNodeOrNull<CanvasModulate>("Sunlight");
-
-            if (sunlight != null)
-            {
-                sunlight.Color = dayTimeColor;
-            }
-            else
-            {
-                GD.Print("Sunlight not found in the scene.");
-            }
+            globalTime = GetNode<GlobalTime>(GlobalTimePath);
+            sunlight = GetNodeOrNull<CanvasModulate>(SunlightPath);
+            usesOutdoorLighting = sunlight != null &&
+                SceneManager.GetCurrentScene(this) != Scene.Cave;
 
             dayCounter = globalTime.GetDay();
-            currentTime = globalTime.GetTime();
 
-            if (SceneManager.GetCurrentScene(this) != Scene.Cave)
+            float timeOfDay = GetTimeOfDay();
+            wasDaylight = IsWithinDaylight(timeOfDay);
+            IsDaytime = IsWithinGameplayDay(timeOfDay);
+
+            if (usesOutdoorLighting)
             {
                 sunlight.Color = globalTime.GetColor();
+            }
+            else if (sunlight == null)
+            {
+                GD.PushWarning("Sunlight was not found; lighting is disabled.");
             }
         }
 
         public override void _Process(double delta)
         {
-            currentTime = globalTime.GetTime();
-            float timeOfDay =
-                currentTime % (dayTimeLength + nightTimeLength);
+            float timeOfDay = GetTimeOfDay();
+            bool isDaylight = IsWithinDaylight(timeOfDay);
 
-            bool isNowDayTime = timeOfDay <= dayTimeLength;
-            if (isNowDayTime != isDayTime)
+            if (!wasDaylight && isDaylight)
             {
-                if (!isDayTime && isNowDayTime)
-                {
-                    dayCounter++;
-                    globalTime.SetDay(dayCounter);
-                    GD.Print(dayCounter);
-                }
-
-                isDayTime = isNowDayTime;
+                dayCounter++;
+                globalTime.SetDay(dayCounter);
             }
 
-            if (timeOfDay <= dayTimeLength &&
-                SceneManager.GetCurrentScene(this) != Scene.Cave)
+            wasDaylight = isDaylight;
+            IsDaytime = IsWithinGameplayDay(timeOfDay);
+
+            if (!usesOutdoorLighting)
             {
-                if (sunlight.Color != dayTimeColor)
-                {
-                    sunlight.Color = LerpColor(
-                        sunlight.Color,
-                        dayTimeColor,
-                        (float)delta / transitionDuration);
-                }
-            }
-            else if (SceneManager.GetCurrentScene(this) != Scene.Cave)
-            {
-                if (sunlight.Color != nightTimeColor)
-                {
-                    sunlight.Color = LerpColor(
-                        sunlight.Color,
-                        nightTimeColor,
-                        (float)delta / transitionDuration);
-                }
+                return;
             }
 
-            if (SceneManager.GetCurrentScene(this) != Scene.Cave)
-            {
-                globalTime.SetColor(sunlight.Color);
-            }
+            Color targetColor = isDaylight ? dayColor : nightColor;
+            float transitionWeight = GetTransitionWeight(delta);
 
-            isDayTime = timeOfDay <= dayTimeLength + zombieDelay;
+            sunlight.Color = InterpolateColor(
+                sunlight.Color,
+                targetColor,
+                transitionWeight);
+            globalTime.SetColor(sunlight.Color);
         }
 
-        private Color LerpColor(Color from, Color to, float t)
+        private float GetTimeOfDay()
+        {
+            float cycleDuration = dayDurationSeconds + nightDurationSeconds;
+            return Mathf.PosMod(globalTime.GetTime(), cycleDuration);
+        }
+
+        private bool IsWithinDaylight(float timeOfDay)
+        {
+            return timeOfDay < dayDurationSeconds;
+        }
+
+        private bool IsWithinGameplayDay(float timeOfDay)
+        {
+            float delay = Mathf.Min(zombieDelaySeconds, nightDurationSeconds);
+            return timeOfDay < dayDurationSeconds + delay;
+        }
+
+        private float GetTransitionWeight(double delta)
+        {
+            if (transitionDurationSeconds <= 0f)
+            {
+                return 1f;
+            }
+
+            return 1f - Mathf.Exp(
+                -(float)delta / transitionDurationSeconds);
+        }
+
+        private static Color InterpolateColor(
+            Color from,
+            Color to,
+            float weight)
         {
             return new Color(
-                Mathf.Lerp(from.R, to.R, t),
-                Mathf.Lerp(from.G, to.G, t),
-                Mathf.Lerp(from.B, to.B, t)
-            );
+                Mathf.Lerp(from.R, to.R, weight),
+                Mathf.Lerp(from.G, to.G, weight),
+                Mathf.Lerp(from.B, to.B, weight),
+                Mathf.Lerp(from.A, to.A, weight));
+        }
+    }
+
+crops_and_corpses_zombie_manager:
+  title: "Code example: adaptive zombie difficulty"
+  description: "A condensed version of the production ZombieManager, edited for readability. It selects a zombie tier from the day/night state and recent kill pressure, then applies centralized town and horde modifiers to immutable base stats."
+  language: csharp
+  code: |-
+    using Godot;
+
+    public partial class ZombieManager : Node
+    {
+        private const string StatsTimerPath = "Timer";
+        private const float StrongTierThreshold = 5f;
+        private const float HordeBonusThreshold = 10f;
+        private const float KillPressureDecayPerSecond = 0.2f;
+        private const float MinimumAttackCooldownSeconds = 0.1f;
+
+        public enum ZombieTier
+        {
+            Weak,
+            Medium,
+            Strong
+        }
+
+        public readonly record struct ZombieStats(
+            int Damage,
+            float AttackCooldownSeconds,
+            float IdleSpeed,
+            float ChaseSpeed)
+        {
+            public ZombieStats Apply(ZombieStats modifier)
+            {
+                return new ZombieStats(
+                    Damage + modifier.Damage,
+                    Mathf.Max(
+                        MinimumAttackCooldownSeconds,
+                        AttackCooldownSeconds +
+                            modifier.AttackCooldownSeconds),
+                    IdleSpeed + modifier.IdleSpeed,
+                    ChaseSpeed + modifier.ChaseSpeed);
+            }
+        }
+
+        private static readonly ZombieStats WeakStats =
+            new(5, 1.5f, 100f, 150f);
+        private static readonly ZombieStats MediumStats =
+            new(10, 1f, 150f, 200f);
+        private static readonly ZombieStats StrongStats =
+            new(15, 1f, 200f, 250f);
+
+        private static readonly ZombieStats HordeModifier =
+            new(20, -0.6f, 30f, 30f);
+
+        private static readonly ZombieStats[] TownLevelModifiers =
+        {
+            default,
+            default,
+            new(3, -0.2f, 30f, 30f),
+            new(5, -0.3f, 40f, 40f),
+            new(7, -0.5f, 50f, 50f),
+            new(10, -0.5f, 80f, 80f)
+        };
+
+        [Export(PropertyHint.Range, "0.1,10,0.1")]
+        private double refreshIntervalSeconds = 1d;
+
+        public static ZombieTier CurrentTier { get; private set; }
+        public static ZombieStats CurrentStats { get; private set; }
+        public static float KillPressure { get; private set; }
+
+        private Timer statsTimer;
+
+        public override void _Ready()
+        {
+            statsTimer = GetNode<Timer>(StatsTimerPath);
+            statsTimer.WaitTime = refreshIntervalSeconds;
+            statsTimer.Timeout += RefreshStats;
+            statsTimer.Start();
+
+            RefreshStats();
+        }
+
+        public override void _ExitTree()
+        {
+            statsTimer.Timeout -= RefreshStats;
+        }
+
+        public static void RegisterKill()
+        {
+            KillPressure++;
+        }
+
+        private void RefreshStats()
+        {
+            DecayKillPressure();
+
+            CurrentTier = SelectTier(
+                TimeManager.IsDaytime,
+                KillPressure);
+
+            ZombieStats stats = GetBaseStats(CurrentTier);
+            stats = stats.Apply(GetTownModifier());
+
+            if (KillPressure > HordeBonusThreshold)
+            {
+                stats = stats.Apply(HordeModifier);
+            }
+
+            CurrentStats = stats;
+        }
+
+        private void DecayKillPressure()
+        {
+            float decay = KillPressureDecayPerSecond *
+                (float)refreshIntervalSeconds;
+            KillPressure = Mathf.Max(0f, KillPressure - decay);
+        }
+
+        private static ZombieTier SelectTier(
+            bool isDaytime,
+            float killPressure)
+        {
+            if (isDaytime)
+            {
+                return ZombieTier.Weak;
+            }
+
+            return killPressure > StrongTierThreshold
+                ? ZombieTier.Strong
+                : ZombieTier.Medium;
+        }
+
+        private static ZombieStats GetBaseStats(ZombieTier tier)
+        {
+            return tier switch
+            {
+                ZombieTier.Weak => WeakStats,
+                ZombieTier.Medium => MediumStats,
+                ZombieTier.Strong => StrongStats,
+                _ => WeakStats
+            };
+        }
+
+        private static ZombieStats GetTownModifier()
+        {
+            int townLevel = TownManager.currentTownStats?.townHallLevel ?? 0;
+            int modifierIndex = Mathf.Clamp(
+                townLevel,
+                0,
+                TownLevelModifiers.Length - 1);
+
+            return TownLevelModifiers[modifierIndex];
         }
     }
 
