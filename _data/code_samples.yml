@@ -1,38 +1,163 @@
 # Add another named entry here, then render it on a page with:
 # {% include code-sample.html sample=site.data.code_samples.entry_name %}
 
-walk_the_dog_quest_progression:
-  title: "Code example: quest progression and persistence"
-  description: "This method validates level completion, advances the quest when all of its levels are finished, and persists the updated state."
+walk_the_dog_quest_manager:
+  title: "Code example: QuestManager lifecycle"
+  description: "A condensed version of the production QuestManager, edited for readability. It loads ScriptableObject quests, restores saved progress, completes levels, and unlocks the next quest."
   language: csharp
   code: |-
-    public void CompleteLevel(int questID, int levelIndex)
+    using System;
+    using System.Linq;
+    using Data;
+    using UnityEngine;
+
+    namespace Logic.Quest
     {
-        var quest = FindQuestByID(questID);
-        if (quest != null)
+        public sealed class QuestManager : IQuestManager
         {
-            var level = quest.GetLevel(levelIndex);
-            if (level != null && !level.isLevelCompleted && level.bonesCount > 0)
+            private const string QuestsPath = "Quests";
+            private const string ActiveQuestKey = "ActiveQuestIndex";
+
+            private QuestScriptableObject[] quests =
+                Array.Empty<QuestScriptableObject>();
+
+            public int ActiveQuestId { get; private set; }
+
+            public QuestManager()
             {
+                LoadQuests();
+                RestoreQuestState();
+            }
+
+            private void LoadQuests()
+            {
+                quests = Resources.LoadAll<QuestScriptableObject>(QuestsPath);
+
+                foreach (QuestScriptableObject quest in quests)
+                {
+                    quest.Reset();
+                }
+            }
+
+            private void RestoreQuestState()
+            {
+                if (quests.Length == 0)
+                {
+                    Debug.LogWarning($"No quests found in Resources/{QuestsPath}.");
+                    return;
+                }
+
+                if (SaveManager.IsSaveDataAvailable(
+                    SaveManager.QUEST_SAVE_FILE_PATH))
+                {
+                    SaveManager.LoadQuestData(ref quests);
+
+                    int savedQuestId = PlayerPrefs.GetInt(ActiveQuestKey, 0);
+                    QuestScriptableObject savedQuest = FindQuestById(savedQuestId);
+
+                    if (savedQuest != null &&
+                        savedQuest.questState != QuestState.Locked)
+                    {
+                        ActiveQuestId = savedQuestId;
+
+                        if (savedQuest.questState != QuestState.Completed)
+                        {
+                            savedQuest.questState = QuestState.Active;
+                        }
+
+                        return;
+                    }
+                }
+
+                InitializeQuests();
+                StartQuest(quests[0].questID);
+            }
+
+            private void InitializeQuests()
+            {
+                for (int i = 0; i < quests.Length; i++)
+                {
+                    quests[i].questState = i == 0
+                        ? QuestState.Unlocked
+                        : QuestState.Locked;
+                }
+            }
+
+            public void StartQuest(int questId)
+            {
+                QuestScriptableObject quest = FindQuestById(questId);
+
+                if (quest == null || quest.questState == QuestState.Locked)
+                {
+                    Debug.LogWarning($"Quest {questId} is locked or missing.");
+                    return;
+                }
+
+                ActiveQuestId = quest.questID;
+                quest.questState = QuestState.Active;
+
+                PlayerPrefs.SetInt(ActiveQuestKey, ActiveQuestId);
+                PlayerPrefs.Save();
+                SaveManager.SaveQuestData(quests);
+            }
+
+            public void CompleteLevel(int questId, int levelIndex)
+            {
+                QuestScriptableObject quest = FindQuestById(questId);
+                QuestLevel level = quest?.GetLevel(levelIndex);
+
+                if (quest == null || level == null ||
+                    level.isLevelCompleted || level.bonesCount <= 0)
+                {
+                    Debug.LogWarning(
+                        $"Level {levelIndex} in quest {questId} cannot be completed.");
+                    return;
+                }
+
                 level.CompleteLevel();
 
                 if (quest.IsQuestFullyCompleted())
                 {
-                    CompleteQuest();
+                    quest.CompleteQuest();
+                    UnlockNextQuest(quest.questID);
                 }
 
-                SaveManager.SaveQuestData(questList);
+                SaveManager.SaveQuestData(quests);
             }
-            else
+
+            private void UnlockNextQuest(int completedQuestId)
             {
-                Debug.LogWarning($"Level {levelIndex} was already completed " +
-                                 $"or not found in quest {questID}.");
+                QuestScriptableObject nextQuest = quests
+                    .Where(quest => quest.questID > completedQuestId)
+                    .OrderBy(quest => quest.questID)
+                    .FirstOrDefault();
+
+                if (nextQuest == null)
+                {
+                    return;
+                }
+
+                nextQuest.questState = QuestState.Unlocked;
+                PlayerPrefs.SetInt(ActiveQuestKey, nextQuest.questID);
+                PlayerPrefs.Save();
+            }
+
+            private QuestScriptableObject FindQuestById(int questId)
+            {
+                return quests.FirstOrDefault(quest => quest.questID == questId);
             }
         }
-        else
-        {
-            Debug.LogError($"Quest with ID {questID} not found.");
-        }
+    }
+
+walk_the_dog_quest_service_registration:
+  title: "Code example: QuestManager service registration"
+  description: "At startup, the QuestManager is registered behind its interface so gameplay and UI systems can access the shared quest state without constructing their own instances."
+  language: csharp
+  code: |-
+    private void RegisterServices()
+    {
+        ServiceLocator.RegisterService<IQuestManager, QuestManager>(
+            new QuestManager());
     }
 
 walk_the_dog_quest_save_serialization:
@@ -111,6 +236,121 @@ crops_and_corpses_zombie_navigation:
             (nextPathPosition - _zombie.GlobalPosition).Normalized();
 
         _zombie.Velocity = newVelocity * _moveSpeed;
+    }
+
+crops_and_corpses_time_manager:
+  title: "Code example: day and night cycle"
+  description: "This Godot manager restores the current world time, transitions the scene lighting between day and night, advances the day counter, and delays zombie waves until night has begun."
+  language: csharp
+  code: |-
+    using Godot;
+
+    public partial class TimeManager : Node
+    {
+        private int dayCounter;
+        private float currentTime;
+        private float timeSpeed = 1;
+
+        [Export] private Color nightTimeColor =
+            new Color(0.5f, 0.5f, 0.5f);
+        [Export] private Color dayTimeColor = new Color(1, 1, 1);
+        [Export] private float transitionDuration = 3f;
+
+        private float dayTimeLength = 300f;
+        private float nightTimeLength = 150f;
+        private GlobalTime globalTime;
+
+        [Export] private float zombieDelay = 60f;
+
+        private static bool isDayTime = true;
+        public static bool dayTime
+        {
+            get { return isDayTime; }
+            set { isDayTime = value; }
+        }
+
+        private CanvasModulate sunlight;
+
+        public override void _Ready()
+        {
+            globalTime = GetNode<GlobalTime>("/root/GlobalTime");
+            sunlight = GetNodeOrNull<CanvasModulate>("Sunlight");
+
+            if (sunlight != null)
+            {
+                sunlight.Color = dayTimeColor;
+            }
+            else
+            {
+                GD.Print("Sunlight not found in the scene.");
+            }
+
+            dayCounter = globalTime.GetDay();
+            currentTime = globalTime.GetTime();
+
+            if (SceneManager.GetCurrentScene(this) != Scene.Cave)
+            {
+                sunlight.Color = globalTime.GetColor();
+            }
+        }
+
+        public override void _Process(double delta)
+        {
+            currentTime = globalTime.GetTime();
+            float timeOfDay =
+                currentTime % (dayTimeLength + nightTimeLength);
+
+            bool isNowDayTime = timeOfDay <= dayTimeLength;
+            if (isNowDayTime != isDayTime)
+            {
+                if (!isDayTime && isNowDayTime)
+                {
+                    dayCounter++;
+                    globalTime.SetDay(dayCounter);
+                    GD.Print(dayCounter);
+                }
+
+                isDayTime = isNowDayTime;
+            }
+
+            if (timeOfDay <= dayTimeLength &&
+                SceneManager.GetCurrentScene(this) != Scene.Cave)
+            {
+                if (sunlight.Color != dayTimeColor)
+                {
+                    sunlight.Color = LerpColor(
+                        sunlight.Color,
+                        dayTimeColor,
+                        (float)delta / transitionDuration);
+                }
+            }
+            else if (SceneManager.GetCurrentScene(this) != Scene.Cave)
+            {
+                if (sunlight.Color != nightTimeColor)
+                {
+                    sunlight.Color = LerpColor(
+                        sunlight.Color,
+                        nightTimeColor,
+                        (float)delta / transitionDuration);
+                }
+            }
+
+            if (SceneManager.GetCurrentScene(this) != Scene.Cave)
+            {
+                globalTime.SetColor(sunlight.Color);
+            }
+
+            isDayTime = timeOfDay <= dayTimeLength + zombieDelay;
+        }
+
+        private Color LerpColor(Color from, Color to, float t)
+        {
+            return new Color(
+                Mathf.Lerp(from.R, to.R, t),
+                Mathf.Lerp(from.G, to.G, t),
+                Mathf.Lerp(from.B, to.B, t)
+            );
+        }
     }
 
 yeti_farm_adaptive_difficulty:
